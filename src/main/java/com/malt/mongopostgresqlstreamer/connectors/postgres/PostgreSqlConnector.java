@@ -284,7 +284,7 @@ public class PostgreSqlConnector implements Connector {
     ) {
         Optional<Object> optRelatedDocuments = root.get(relatedCollection);
         if (!optRelatedDocuments.isPresent()) {
-            log.warn("No field corresponding to the specified related collection ({}) was found.", relatedCollection);
+            log.debug("No field corresponding to the specified related collection ({}) was found.", relatedCollection);
             return Collections.emptyList();
         }
 
