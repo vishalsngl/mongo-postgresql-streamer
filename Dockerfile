@@ -25,7 +25,6 @@ RUN mkdir -p /var/log/malt-app /opt/malt-app /etc/malt-app /vault
 
 # Replace APP_VERSION with a wildcard if we build within a reproductible container context (gitlab vs bamboo)
 COPY target/${APP_NAME}-${APP_VERSION}.${APP_ARCHIVE}  /opt/malt-app/${APP_NAME}.${APP_ARCHIVE}
-COPY warmup.sh /opt/malt-app/warmup.sh
 
 RUN chown -R root:malt /opt/malt-app && \
     chmod 770 /opt/malt-app && \
