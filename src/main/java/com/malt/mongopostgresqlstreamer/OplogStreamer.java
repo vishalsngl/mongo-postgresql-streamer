@@ -61,10 +61,12 @@ public class OplogStreamer {
                 checkpointManager.keep(timestamp);
             });
         } catch (MongoQueryException e) {
-            if (e.getErrorMessage().contains("MongoCursorNotFoundException")) {
+            String msg = e.getErrorMessage();
+            if (msg.contains("CappedPositionLost")
+                    || msg.contains("MongoCursorNotFoundException")) {
                 watchFromCheckpoint(checkpoint);
             } else {
-                throw  e;
+                throw e;
             }
         }
     }
@@ -160,9 +162,9 @@ public class OplogStreamer {
                 in("op", "d", "u", "i")))
 
                 .orElseGet(() -> and(
-                in("ns", mappingsManager.mappedNamespaces()),
-                exists("fromMigrate", false),
-                in("op", "d", "u", "i")));
+                        in("ns", mappingsManager.mappedNamespaces()),
+                        exists("fromMigrate", false),
+                        in("op", "d", "u", "i")));
     }
 
 
