@@ -46,27 +46,38 @@ public class OplogStreamer {
     @Qualifier("oplog")
     private MongoDatabase oplog;
     @Autowired
-    @Qualifier("database")
-    private MongoDatabase adminDatabase;
-    @Autowired
     private MongoClient mongoClient;
     @Autowired
     private List<Connector> connectors;
 
-    public void watchFromCheckpoint(Optional<BsonTimestamp> checkpoint) {
-        log.info("Start watching the oplog...");
-        try (MongoCursor<Document> documents = oplogDocuments(checkpoint).iterator()) {
-            documents.forEachRemaining(document -> {
-                BsonTimestamp timestamp = processOperation(document);
-                checkpointManager.keep(timestamp);
-            });
-        } catch (MongoQueryException e) {
-            String msg = e.getErrorMessage();
-            if (msg.contains("CappedPositionLost")
-                    || msg.contains("MongoCursorNotFoundException")) {
-                watchFromCheckpoint(checkpoint);
-            } else {
-                throw e;
+    void watchFromCheckpoint(Optional<BsonTimestamp> checkpoint) {
+        int watches = 1;
+
+        while (true) {
+            log.info("Start watching the oplog ({})...", watches++);
+
+            try (MongoCursor<Document> documents = oplogDocuments(checkpoint).iterator()) {
+                documents.forEachRemaining(document -> {
+                    BsonTimestamp timestamp = processOperation(document);
+                    checkpointManager.keep(timestamp);
+                });
+            } catch (MongoQueryException e) {
+                String msg = e.getErrorMessage();
+                if (msg.contains("CappedPositionLost")
+                        || msg.contains("MongoCursorNotFoundException")) {
+                    int numberOfSecondsToWait = 1;
+                    log.info("Cursor lost, retrying in {}s", numberOfSecondsToWait, e);
+
+                    // wait a bit so that we don't loop too fast in case that code generates an infinite loop
+                    try {
+                        Thread.sleep(numberOfSecondsToWait * 1000);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                } else {
+                    throw e;
+                }
             }
         }
     }

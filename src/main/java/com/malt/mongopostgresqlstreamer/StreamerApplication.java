@@ -47,7 +47,7 @@ public class StreamerApplication implements ApplicationRunner {
         try {
             oplogStreamer.watchFromCheckpoint(checkpoint);
         } catch (IllegalStateException e) {
-            // state should be: open is throw when the application is stopped and the connection pool stop
+            // "state should be: open" is thrown when the application is stopped and the connection pool stops
             // this is not an error however
             if (!e.getMessage().contains("state should be: open")) {
                 throw e;
