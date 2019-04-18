@@ -4,7 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.BsonTimestamp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.*;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.Optional;
@@ -30,15 +32,27 @@ public class StreamerApplication implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         Optional<BsonTimestamp> checkpoint = checkpointManager.getLastKnown();
+        boolean checkpointPresent = checkpoint.isPresent();
+        boolean performInitialLoad = !checkpointPresent || forceReimport;
 
-        if (!checkpoint.isPresent() || forceReimport) {
-            log.info("No checkpoint found, we will perform a initial load");
+        if (performInitialLoad) {
+            if (!checkpointPresent) {
+                log.info("No checkpoint found, we will perform a initial load");
+            }
+
+            if (forceReimport) {
+                log.info("Forcing reimport, we will perform a initial load");
+            }
+
             checkpoint = Optional.of(checkpointManager.getLastOplog());
+
             log.info("Last oplog found have timestamp : {}", checkpoint.get().toString());
             checkpointManager.storeImportStart();
+
             long start = System.currentTimeMillis();
             initialImporter.start();
             long end = System.currentTimeMillis();
+
             long length = end - start;
             checkpointManager.keep(checkpoint.get());
             checkpointManager.storeImportEnd(length);

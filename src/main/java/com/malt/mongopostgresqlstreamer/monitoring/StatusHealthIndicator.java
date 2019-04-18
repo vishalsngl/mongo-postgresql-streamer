@@ -12,19 +12,25 @@ import java.util.Optional;
 @Component
 public class StatusHealthIndicator implements HealthIndicator {
 
+    private final CheckpointManager checkpointManager;
+
     @Autowired
-    private CheckpointManager checkpointManager;
+    StatusHealthIndicator(CheckpointManager checkpointManager) {
+        this.checkpointManager = checkpointManager;
+    }
 
     @Override
     public Health health() {
-
         Lag lag = new Lag();
         Optional<BsonTimestamp> lastKnown = checkpointManager.getLastKnown();
         lag.computeFromCheckpointAndOplog(lastKnown);
+
         InitialImport initialImport = checkpointManager.lastImportStatus();
+
         return Health.up()
                 .withDetail("lag", lag)
                 .withDetail("initial", initialImport)
+                .withDetail("checkpoint", lastKnown.isPresent())
                 .build();
     }
 }

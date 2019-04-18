@@ -24,27 +24,21 @@ import static com.mongodb.client.model.Updates.set;
 @Slf4j
 public class CheckpointManager {
 
-    public static final String OPLOG_COLLECTION_NAME = "oplog.rs";
+    private static final String OPLOG_COLLECTION_NAME = "oplog.rs";
 
-    @Value(value = "${mongo.connector.identifier:test}")
-    private String identifier;
+    private final MongoDatabase database;
+    private final MongoDatabase oplog;
+    private final String identifier;
 
     @Autowired
-    @Qualifier("database")
-    private MongoDatabase database;
-    @Autowired
-    @Qualifier("oplog")
-    private MongoDatabase oplog;
+    CheckpointManager(
+            @Qualifier("database") MongoDatabase database,
+            @Qualifier("oplog") MongoDatabase oplog,
+            @Value(value = "${mongo.connector.identifier:test}") String identifier) {
 
-    public BsonTimestamp getLastOplog() {
-        Document lastOplog = oplog.getCollection(OPLOG_COLLECTION_NAME).find()
-                .sort(Sorts.descending("$natural"))
-                .first();
-
-        if (lastOplog != null) {
-            return lastOplog.get("ts", BsonTimestamp.class);
-        }
-        throw new IllegalStateException("Unable to retrieve last oplog. Maybe you are not running your mongodb in a replica set");
+        this.database = database;
+        this.oplog = oplog;
+        this.identifier = identifier;
     }
 
     public Optional<BsonTimestamp> getLastKnown() {
@@ -56,33 +50,6 @@ public class CheckpointManager {
             log.debug("Checkpoint found in the administrative database : {}.", checkpoint.get().toString());
         }
         return checkpoint;
-    }
-
-
-    public void keep(BsonTimestamp timestamp) {
-        MongoCollection<Document> collection = database.getCollection("mongooplog");
-        collection.updateOne(eq("_id", identifier), set("ts", timestamp), new UpdateOptions().upsert(true));
-    }
-
-    public void storeImportStart() {
-        MongoCollection<Document> collection = database.getCollection("mongooplog");
-        collection.updateOne(eq("_id", identifier), combine(
-                set("import", "running"),
-                set("start", new Date())
-        ), new UpdateOptions().upsert(true));
-    }
-
-    public void storeImportEnd(float length) {
-        float lenghtInMinutes = (length/1000F)/60F;
-
-        MongoCollection<Document> collection = database.getCollection("mongooplog");
-        collection.updateOne(eq("_id", identifier), combine(
-                set("import", "done"),
-                set("end", new Date()),
-                set("length", lenghtInMinutes)
-                )
-                , new UpdateOptions().upsert(true));
-
     }
 
     public InitialImport lastImportStatus() {
@@ -99,5 +66,44 @@ public class CheckpointManager {
         initialImport.setStatus(state);
         initialImport.setLengthInMinutes(length);
         return initialImport;
+    }
+
+    BsonTimestamp getLastOplog() {
+        Document lastOplog = oplog.getCollection(OPLOG_COLLECTION_NAME).find()
+                .sort(Sorts.descending("$natural"))
+                .first();
+
+        if (lastOplog != null) {
+            return lastOplog.get("ts", BsonTimestamp.class);
+        }
+
+        throw new IllegalStateException("Unable to retrieve last oplog. Maybe you are not running your mongodb in a replica set");
+    }
+
+    void keep(BsonTimestamp timestamp) {
+        MongoCollection<Document> collection = database.getCollection("mongooplog");
+        collection.updateOne(eq("_id", identifier), set("ts", timestamp), new UpdateOptions().upsert(true));
+    }
+
+    void storeImportStart() {
+        MongoCollection<Document> collection = database.getCollection("mongooplog");
+        collection.updateOne(eq("_id", identifier), combine(
+                set("import", "running"),
+                set("start", new Date()),
+                set("ts", null)
+        ), new UpdateOptions().upsert(true));
+    }
+
+    void storeImportEnd(float length) {
+        float lenghtInMinutes = (length/1000F)/60F;
+
+        MongoCollection<Document> collection = database.getCollection("mongooplog");
+        collection.updateOne(eq("_id", identifier), combine(
+                set("import", "done"),
+                set("end", new Date()),
+                set("length", lenghtInMinutes)
+                )
+                , new UpdateOptions().upsert(true));
+
     }
 }
