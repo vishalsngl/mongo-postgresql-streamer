@@ -1,36 +1,50 @@
 package com.malt.mongopostgresqlstreamer.monitoring;
 
 import com.malt.mongopostgresqlstreamer.CheckpointManager;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import org.bson.BsonTimestamp;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+import static com.mongodb.client.model.Filters.eq;
+
 @Component
 public class StatusHealthIndicator implements HealthIndicator {
 
     private final CheckpointManager checkpointManager;
+    private final MongoDatabase oplog;
 
-    @Autowired
-    StatusHealthIndicator(CheckpointManager checkpointManager) {
+    StatusHealthIndicator(
+            CheckpointManager checkpointManager,
+            @Qualifier("oplog") MongoDatabase oplog) {
+
         this.checkpointManager = checkpointManager;
+        this.oplog = oplog;
     }
 
     @Override
     public Health health() {
-        Lag lag = new Lag();
         Optional<BsonTimestamp> lastKnown = checkpointManager.getLastKnown();
-        lag.computeFromCheckpointAndOplog(lastKnown);
 
+        Lag lag = lastKnown.map(Lag::new).orElseGet(Lag::new);
+        boolean checkpointUp = lastKnown.map(this::checkIfCheckpointIsInOpLog).orElse(false);
         InitialImport initialImport = checkpointManager.lastImportStatus();
 
         return Health.up()
                 .withDetail("lag", lag)
                 .withDetail("initial", initialImport)
-                .withDetail("checkpoint", lastKnown.isPresent())
+                .withDetail("checkpoint", checkpointUp)
                 .build();
+    }
+
+    private boolean checkIfCheckpointIsInOpLog(BsonTimestamp ts) {
+        MongoCollection<Document> oplogCollection = this.oplog.getCollection("oplog.rs");
+        return oplogCollection.count(eq("ts", ts)) != 0;
     }
 }

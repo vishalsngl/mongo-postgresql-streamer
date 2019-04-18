@@ -4,19 +4,23 @@ import lombok.Data;
 import org.bson.BsonTimestamp;
 
 import java.util.Date;
-import java.util.Optional;
 
 @Data
-public class Lag {
-    private Date lastCheckpoint;
-    private Date now;
-    private long lagLength;
+class Lag {
 
-    public void computeFromCheckpointAndOplog(Optional<BsonTimestamp> lastKnown) {
-        lastKnown.ifPresent( checkpoint -> {
-            lastCheckpoint = new Date(((long)checkpoint.getTime())*1000);
-            now = new Date();
-            lagLength = now.getTime() - checkpoint.getTime();
-        });
+    private final Date lastCheckpoint;
+    private final Date now;
+    private final long lagLength;
+
+    Lag() {
+        this.lastCheckpoint = null;
+        this.now = new Date();
+        this.lagLength = -1;
+    }
+
+    Lag(BsonTimestamp checkpoint) {
+        lastCheckpoint = new Date(((long)checkpoint.getTime())*1000);
+        now = new Date();
+        lagLength = now.getTime() - checkpoint.getTime();
     }
 }
