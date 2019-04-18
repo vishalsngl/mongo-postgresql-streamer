@@ -12,8 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-import static com.mongodb.client.model.Filters.eq;
-
 @Component
 public class StatusHealthIndicator implements HealthIndicator {
 
@@ -45,6 +43,16 @@ public class StatusHealthIndicator implements HealthIndicator {
 
     private boolean checkIfCheckpointIsInOpLog(BsonTimestamp ts) {
         MongoCollection<Document> oplogCollection = this.oplog.getCollection("oplog.rs");
-        return oplogCollection.count(eq("ts", ts)) != 0;
+        Document firstOpLog = oplogCollection.find().limit(1).first();
+        if (firstOpLog == null) {
+            return false;
+        }
+
+        BsonTimestamp olderTs = firstOpLog.get("ts", BsonTimestamp.class);
+        if (olderTs == null) {
+            return false;
+        }
+
+        return olderTs.compareTo(ts) <= 0;
     }
 }
