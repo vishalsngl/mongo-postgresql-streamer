@@ -54,7 +54,6 @@ public class PostgreSqlConnector implements Connector {
 
         TableMapping tableMapping = getTableMappingOrFail(mappingName, mapping);
 
-        sqlExecutor.setTableAsLogged(tableMapping.getDestinationName());
         sqlExecutor.addPrimaryKey(tableMapping.getDestinationName(), tableMapping.getPrimaryKey());
 
         for (String index : tableMapping.getIndices()) {
