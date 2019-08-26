@@ -33,17 +33,32 @@ public class PostgreSqlConnector implements Connector {
             String mappingName,
             DatabaseMapping mapping
     ) {
+        dropTableAndRelatives(mappingName, mapping);
+        createTableAndRelatives(mappingName, mapping);
+    }
+
+    private void dropTableAndRelatives(String mappingName, DatabaseMapping mapping) {
+        TableMapping tableMapping = getTableMappingOrFail(mappingName, mapping);
+
+        List<String> relatedTables = getRelatedTables(tableMapping);
+        for (String relatedTable : relatedTables) {
+            dropTableAndRelatives(relatedTable, mapping);
+        }
+
+        sqlExecutor.dropTable(tableMapping.getDestinationName());
+    }
+
+    private void createTableAndRelatives(String mappingName, DatabaseMapping mapping) {
         TableMapping tableMapping = getTableMappingOrFail(mappingName, mapping);
 
         log.info("Importing {} from the beginning...", tableMapping.getSourceCollection());
         log.debug("Preparing initial import for collection {}", tableMapping.getSourceCollection());
 
-        sqlExecutor.dropTable(tableMapping.getDestinationName());
         sqlExecutor.createTable(tableMapping.getDestinationName(), tableMapping.getFieldMappings());
 
         List<String> relatedTables = getRelatedTables(tableMapping);
         for (String relatedTable : relatedTables) {
-            createTable(relatedTable, mapping);
+            createTableAndRelatives(relatedTable, mapping);
         }
     }
 
@@ -65,6 +80,16 @@ public class PostgreSqlConnector implements Connector {
         for (String relatedTable : relatedTables) {
             addConstraints(relatedTable, mapping);
         }
+
+        tableMapping.getFieldMappings().stream()
+                .filter(f -> f.getForeignKey() != null)
+                .forEach(fieldServingAsFk -> {
+                    String childTable = fieldServingAsFk.getDestinationName();
+                    String childTableField = fieldServingAsFk.getForeignKey();
+                    String parentTable = tableMapping.getDestinationName();
+                    String parentField = tableMapping.getPrimaryKey();
+                    sqlExecutor.addForeignKey(childTable, childTableField, parentTable, parentField);
+                });
     }
 
     @Override
@@ -100,7 +125,7 @@ public class PostgreSqlConnector implements Connector {
                 tableMapping.getDestinationName(),
                 fieldName,
                 value
-                );
+        );
     }
 
     @Override
@@ -146,8 +171,8 @@ public class PostgreSqlConnector implements Connector {
                     int tmpCounter = counter.addAndGet(nbInsertions);
                     if (tmpCounter % 1000 == 0) {
                         long endTime = System.currentTimeMillis();
-                        double processTimeInSeconds = (endTime - startTime)/1000D;
-                        log.info("{} documents imported to {} - speed : {}/s", tmpCounter, destinationName, tmpCounter/processTimeInSeconds);
+                        double processTimeInSeconds = (endTime - startTime) / 1000D;
+                        log.info("{} documents imported to {} - speed : {}/s", tmpCounter, destinationName, tmpCounter / processTimeInSeconds);
                     }
                 });
 
@@ -202,6 +227,7 @@ public class PostgreSqlConnector implements Connector {
             }
 
             Object foreignKeyValue = getPrimaryKeyValue(document, tableMapping);
+            System.out.println(relatedCollection + "." + foreignKey + ":" + foreignKeyValue);
 
             removeByForeignKey(optFieldMapping.get().getDestinationName(), foreignKey, foreignKeyValue, mappings);
         }
@@ -362,7 +388,7 @@ public class PostgreSqlConnector implements Connector {
         }
 
         if (upperType.startsWith("DOUBLE PRECISION") && value instanceof String) {
-            return new BigDecimal((String)value);
+            return new BigDecimal((String) value);
         }
 
         // Corner case, we don't know how to handle these fields, so keep it as the result of `toString`.

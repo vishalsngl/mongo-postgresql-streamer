@@ -8,11 +8,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 @Service
@@ -37,6 +37,7 @@ public class SqlExecutor {
         );
 
         List<Object> values = getValues(fields);
+        //noinspection CollectionAddedToSelf
         values.addAll(values); // Duplicates are needed for the UPDATE clause
         Object[] valuesArray = values.toArray();
 
@@ -54,7 +55,7 @@ public class SqlExecutor {
         copyOperationsManager.addInsertOperation(table, mappings, fields);
     }
 
-    public void finalizeBatchInsert(String destTable) {
+    void finalizeBatchInsert(String destTable) {
         copyOperationsManager.finalizeCopyOperations(destTable);
     }
 
@@ -71,6 +72,20 @@ public class SqlExecutor {
     void addPrimaryKey(String table, String primaryKeyName) {
         log.debug("Adding primary key '{}' on table '{}' ...", primaryKeyName, table);
         sqlExecute("ALTER TABLE %s ADD PRIMARY KEY(%s)", table, primaryKeyName);
+    }
+
+    void addForeignKey(String childTable, String childTableField, String parentTable, String parentField) {
+        sqlExecute(
+                "ALTER TABLE %s " +
+                        "ADD CONSTRAINT fk_%s_%s " +
+                        "FOREIGN KEY (%s) " +
+                        "REFERENCES %s (%s) " +
+                        "ON DELETE CASCADE;",
+                childTable,
+                childTable, childTableField,
+                childTableField,
+                parentTable, parentField
+        );
     }
 
     void createTable(String table, List<FieldMapping> fieldMappings) {
@@ -109,40 +124,35 @@ public class SqlExecutor {
     private List<Object> getValues(List<Field> fields) {
         return fields.stream()
                 .map(Field::getValue)
-                .map(v -> v instanceof String ? ((String) v).replaceAll("\\u0000","") : v)
+                .map(v -> v instanceof String ? ((String) v).replaceAll("\\u0000", "") : v)
                 .map(v -> v instanceof ObjectId ? v.toString() : v)
                 .collect(toList());
     }
 
     private String getPlaceholders(List<Field> fields) {
-        return String.join(
-                ", ",
-                fields.stream().map(p -> "?").collect(toList())
-        );
+        return fields.stream()
+                .map(p -> "?")
+                .collect(joining(", "));
     }
 
     private String getCommaSeparatedFieldNames(List<Field> fields) {
-        return String.join(
-                ", ",
-                fields.stream().map(Field::getName).collect(toList())
-        );
+        return fields.stream()
+                .map(Field::getName)
+                .collect(joining(", "));
     }
 
     private String fieldAndTypes(List<FieldMapping> fieldMappings) {
         return fieldMappings
                 .stream()
                 .filter(f -> !f.getType().startsWith("_"))
-                .sorted(Comparator.comparing(FieldMapping::getDestinationName))
+                .sorted(comparing(FieldMapping::getDestinationName))
                 .map(f -> f.getDestinationName() + " " + f.getType())
-                .collect(Collectors.joining(","));
+                .collect(joining(","));
     }
 
     private String generateUpdateString(List<Field> fields) {
-        return String.join(
-                ", ",
-                fields.stream()
-                        .map(field -> field.getName() + " = ?")
-                        .collect(toList())
-        );
+        return fields.stream()
+                .map(field -> field.getName() + " = ?")
+                .collect(joining(", "));
     }
 }
