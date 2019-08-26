@@ -125,6 +125,7 @@ class StreamerIntegrationTest {
         assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
         assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
         assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
+        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
     }
 
     @Test
@@ -137,16 +138,18 @@ class StreamerIntegrationTest {
         assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
         assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
         assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
+        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
 
         // when watching for changes and updating data
         launchStreamerFromLastOplog();
-        updateData();  // remove some linked characters
+        updateData();  // remove some linked characters and ratings
 
         // then
         awaitSomeTime().untilAsserted(() -> {
             assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
             assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(32);
             assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
+            assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(1);
         });
     }
 
@@ -160,6 +163,7 @@ class StreamerIntegrationTest {
         assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
         assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
         assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
+        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
 
         // when watching for changes and removing data
         launchStreamerFromLastOplog();
@@ -170,6 +174,7 @@ class StreamerIntegrationTest {
             assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(16);
             assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(20);
             assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(9);
+            assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(2);
         });
     }
 
@@ -182,7 +187,7 @@ class StreamerIntegrationTest {
     }
 
     private void clearData() {
-        Stream.of("superheros_marvel", "superhero_characters", "superheros").forEach(tableName ->
+        Stream.of("superhero_ratings", "superheros_marvel", "superhero_characters", "superheros").forEach(tableName ->
                 jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName));
 
         getCollection().deleteMany(new Document());

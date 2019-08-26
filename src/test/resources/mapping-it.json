@@ -19,6 +19,12 @@
         "type": "_ARRAY_OF_SCALARS",
         "fk": "superhero_id",
         "valueField": "character"
+      },
+      "ratings":{
+        "dest": "superhero_ratings",
+        "type": "_ARRAY",
+        "fk": "superhero_id",
+        "valueField": "character"
       }
     },
     "superhero_characters": {
@@ -45,6 +51,19 @@
       },
       "superhero":{
         "dest": "superhero",
+        "type": "TEXT"
+      }
+    },
+    "superhero_ratings": {
+      "pk": "id",
+      "superhero_id": {
+        "dest": "superhero_id",
+        "type": "TEXT"
+      },
+      "rating": {
+        "type": "INTEGER"
+      },
+      "type": {
         "type": "TEXT"
       }
     }

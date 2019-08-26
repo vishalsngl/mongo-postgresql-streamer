@@ -7,7 +7,17 @@
   {
     "superhero": "Superman",
     "publisher": "DC Comics",
-    "characters": ["Kal-El"]
+    "characters": ["Kal-El"],
+    "ratings": [
+      {
+        "rating": 3,
+        "type": "PRESS"
+      },
+      {
+        "rating": 4,
+        "type": "PUBLIC"
+      }
+    ]
   },
   {
     "superhero": "Flash",
@@ -27,7 +37,17 @@
   {
     "superhero": "Wonder Woman",
     "publisher": "DC Comics",
-    "characters": ["Princess Diana"]
+    "characters": ["Princess Diana"],
+    "ratings": [
+      {
+        "rating": 4,
+        "type": "PRESS"
+      },
+      {
+        "rating": 2,
+        "type": "PUBLIC"
+      }
+    ]
   },
   {
     "superhero": "Martian Manhunter",

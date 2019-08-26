@@ -27,7 +27,13 @@
   {
     "superhero": "Wonder Woman",
     "publisher": "DC Comics",
-    "characters": ["Princess Diana"]
+    "characters": ["Princess Diana"],
+    "ratings": [
+      {
+        "rating": 3,
+        "type": "PUBLIC"
+      }
+    ]
   },
   {
     "superhero": "Martian Manhunter",
