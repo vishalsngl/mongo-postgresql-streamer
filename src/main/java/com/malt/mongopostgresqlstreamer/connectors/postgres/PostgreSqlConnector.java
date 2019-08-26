@@ -227,7 +227,6 @@ public class PostgreSqlConnector implements Connector {
             }
 
             Object foreignKeyValue = getPrimaryKeyValue(document, tableMapping);
-            System.out.println(relatedCollection + "." + foreignKey + ":" + foreignKeyValue);
 
             removeByForeignKey(optFieldMapping.get().getDestinationName(), foreignKey, foreignKeyValue, mappings);
         }
