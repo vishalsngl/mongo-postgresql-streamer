@@ -114,31 +114,21 @@ class StreamerIntegrationTest {
 
     @Test
     void should_import_data_from_mongo_to_pgsql() throws Exception {
-        // given
-        clearData();
-
         // when
         loadData();
         initialImporter.start();
 
         // then
-        assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
-        assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
-        assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
-        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
+        assertThatInitialRowCountsAreAsExpected();
     }
 
     @Test
     void should_propagate_updates_from_mongo_to_pgsql() throws Exception {
         // given that data are already present
-        clearData();
         loadData();
         initialImporter.start();
 
-        assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
-        assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
-        assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
-        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
+        assertThatInitialRowCountsAreAsExpected();
 
         // when watching for changes and updating data
         launchStreamerFromLastOplog();
@@ -150,20 +140,17 @@ class StreamerIntegrationTest {
             assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(32);
             assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
             assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(1);
+            assertThat(countRowsInTable(jdbcTemplate, "superhero_rating_tags")).isEqualTo(2);
         });
     }
 
     @Test
     void should_propagate_removals_from_mongo_to_pgsql() throws Exception {
         // given that data are already present
-        clearData();
         loadData();
         initialImporter.start();
 
-        assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
-        assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
-        assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
-        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
+        assertThatInitialRowCountsAreAsExpected();
 
         // when watching for changes and removing data
         launchStreamerFromLastOplog();
@@ -175,7 +162,16 @@ class StreamerIntegrationTest {
             assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(20);
             assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(9);
             assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(2);
+            assertThat(countRowsInTable(jdbcTemplate, "superhero_rating_tags")).isEqualTo(3);
         });
+    }
+
+    private void assertThatInitialRowCountsAreAsExpected() {
+        assertThat(countRowsInTable(jdbcTemplate, "superheros")).isEqualTo(20);
+        assertThat(countRowsInTable(jdbcTemplate, "superhero_characters")).isEqualTo(33);
+        assertThat(countRowsInTable(jdbcTemplate, "superheros_marvel")).isEqualTo(10);
+        assertThat(countRowsInTable(jdbcTemplate, "superhero_ratings")).isEqualTo(4);
+        assertThat(countRowsInTable(jdbcTemplate, "superhero_rating_tags")).isEqualTo(5);
     }
 
     private ConditionFactory awaitSomeTime() {
@@ -187,8 +183,8 @@ class StreamerIntegrationTest {
     }
 
     private void clearData() {
-        Stream.of("superhero_ratings", "superheros_marvel", "superhero_characters", "superheros").forEach(tableName ->
-                jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName));
+        Stream.of("superhero_rating_tags", "superhero_ratings", "superheros_marvel", "superhero_characters", "superheros")
+                .forEach(tableName -> jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName));
 
         getCollection().deleteMany(new Document());
     }

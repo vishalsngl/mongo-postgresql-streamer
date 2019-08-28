@@ -15,7 +15,8 @@
       },
       {
         "rating": 4,
-        "type": "PUBLIC"
+        "type": "PUBLIC",
+        "tags": ["fantastic", "krypton"]
       }
     ]
   },
@@ -45,7 +46,8 @@
       },
       {
         "rating": 2,
-        "type": "PUBLIC"
+        "type": "PUBLIC",
+        "tags": ["fantastic", "wonder", "wow"]
       }
     ]
   },

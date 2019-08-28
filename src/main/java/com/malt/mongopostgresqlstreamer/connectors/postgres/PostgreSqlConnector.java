@@ -106,7 +106,9 @@ public class PostgreSqlConnector implements Connector {
 
         sqlExecutor.upsert(tableMapping.getDestinationName(), primaryKeyName, sqlQueryFields);
 
-        importDocumentRelations(document, mappings, tableMapping, primaryKeyName, sqlQueryFields);
+        importDocumentRelations(document, mappings, tableMapping, primaryKeyName, sqlQueryFields, tableMapping);
+
+        sqlExecutor.finalizeBatchInsert(tableMapping.getDestinationName());
     }
 
     @Override
@@ -142,7 +144,8 @@ public class PostgreSqlConnector implements Connector {
             Stream<FlattenMongoDocument> documents,
             DatabaseMapping mappings) {
 
-        bulkInsert(mappingName, totalNumberOfDocuments, documents, mappings, false);
+        bulkInsert(mappingName, totalNumberOfDocuments, documents, mappings, false, mappingName);
+        sqlExecutor.finalizeBatchInsert(mappingName);
     }
 
     private int bulkInsert(
@@ -150,23 +153,25 @@ public class PostgreSqlConnector implements Connector {
             long totalNumberOfDocuments,
             Stream<FlattenMongoDocument> documents,
             DatabaseMapping mappings,
-            boolean relatedCollection) {
+            boolean relatedCollection,
+            String parentMappingName) {
 
         long startTime = System.currentTimeMillis();
 
         AtomicInteger counter = new AtomicInteger();
+        TableMapping parentMapping = getTableMappingOrFail(parentMappingName, mappings);
         TableMapping tableMapping = getTableMappingOrFail(mappingName, mappings);
 
-        if (!relatedCollection) {
-            log.info("Starting bulk insert of collection {} ({} documents)...", tableMapping.getSourceCollection(), totalNumberOfDocuments);
-        } else {
+        if (relatedCollection) {
             log.trace("Starting bulk insert of collection {} ({} documents)...", tableMapping.getSourceCollection(), totalNumberOfDocuments);
+        } else {
+            log.info("Starting bulk insert of collection {} ({} documents)...", tableMapping.getSourceCollection(), totalNumberOfDocuments);
         }
 
         String destinationName = tableMapping.getDestinationName();
         documents
                 .forEach(document -> {
-                    int nbInsertions = importDocument(document, mappings, tableMapping);
+                    int nbInsertions = importDocument(document, mappings, tableMapping, parentMapping);
 
                     int tmpCounter = counter.addAndGet(nbInsertions);
                     if (tmpCounter % 1000 == 0) {
@@ -176,25 +181,26 @@ public class PostgreSqlConnector implements Connector {
                     }
                 });
 
-        sqlExecutor.finalizeBatchInsert(destinationName);
-
-        if (!relatedCollection) {
-            log.info("{} and its related collections was successfully imported ({} documents) !", tableMapping.getSourceCollection(), counter.get());
-        } else {
+        if (relatedCollection) {
             log.trace("Bulk insert of collection {} done : {} documents inserted", tableMapping.getSourceCollection(), counter.get());
+        } else {
+            log.info("{} and its related collections was successfully imported ({} documents) !", tableMapping.getSourceCollection(), counter.get());
         }
 
         return counter.get();
     }
 
-    private int importDocument(FlattenMongoDocument document, DatabaseMapping mappings, TableMapping tableMapping) {
+    private int importDocument(FlattenMongoDocument document, DatabaseMapping mappings, TableMapping tableMapping, TableMapping parentMapping) {
+        String parentTable = parentMapping.getDestinationName();
+
         String primaryKeyName = tableMapping.getPrimaryKey();
         String destinationName = tableMapping.getDestinationName();
         List<Field> mappedFields = keepOnlyMappedFields(document, tableMapping);
         List<Field> sqlQueryFields = withPrimaryKeyIfNecessary(mappedFields, primaryKeyName);
-        sqlExecutor.batchInsert(destinationName, tableMapping.getFieldMappings(), sqlQueryFields);
 
-        return importDocumentRelations(document, mappings, tableMapping, primaryKeyName, sqlQueryFields) + 1;
+        sqlExecutor.batchInsert(parentTable, destinationName, tableMapping.getFieldMappings(), sqlQueryFields);
+
+        return importDocumentRelations(document, mappings, tableMapping, primaryKeyName, sqlQueryFields, parentMapping) + 1;
     }
 
     private int importDocumentRelations(
@@ -202,14 +208,15 @@ public class PostgreSqlConnector implements Connector {
             DatabaseMapping mappings,
             TableMapping tableMapping,
             String primaryKeyName,
-            List<Field> fields) {
+            List<Field> fields,
+            TableMapping parentMapping) {
 
         Field primaryKey = fields.stream()
                 .filter(field -> field.getName().equals(primaryKeyName))
                 .findFirst()
                 .orElse(null);
 
-        return importRelatedCollections(mappings, tableMapping, document, primaryKey);
+        return importRelatedCollections(mappings, tableMapping, document, primaryKey, parentMapping);
     }
 
     private void removeAllRelatedRecords(DatabaseMapping mappings, TableMapping tableMapping, FlattenMongoDocument document) {
@@ -232,7 +239,7 @@ public class PostgreSqlConnector implements Connector {
         }
     }
 
-    private int importRelatedCollections(DatabaseMapping mappings, TableMapping tableMapping, FlattenMongoDocument document, Field primaryKey) {
+    private int importRelatedCollections(DatabaseMapping mappings, TableMapping tableMapping, FlattenMongoDocument document, Field primaryKey, TableMapping parentMapping) {
         List<String> relatedCollections = getRelatedCollections(tableMapping);
 
         AtomicInteger counter = new AtomicInteger();
@@ -260,7 +267,8 @@ public class PostgreSqlConnector implements Connector {
                             relatedDocuments.size(),
                             relatedDocuments.stream(),
                             mappings,
-                            true
+                            true,
+                            parentMapping.getDestinationName()
                     )
             );
         }

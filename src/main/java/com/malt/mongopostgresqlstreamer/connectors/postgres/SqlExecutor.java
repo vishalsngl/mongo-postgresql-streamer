@@ -50,13 +50,13 @@ public class SqlExecutor {
         }
     }
 
-    void batchInsert(String table, List<FieldMapping> mappings, List<Field> fields) {
+    void batchInsert(String parentTable, String table, List<FieldMapping> mappings, List<Field> fields) {
         log.trace("Bulking insert of {} ({})", table, fields);
-        copyOperationsManager.addInsertOperation(table, mappings, fields);
+        copyOperationsManager.addInsertOperation(parentTable, table, mappings, fields);
     }
 
-    void finalizeBatchInsert(String destTable) {
-        copyOperationsManager.finalizeCopyOperations(destTable);
+    void finalizeBatchInsert(String destParentTable) {
+        copyOperationsManager.finalizeCopyOperations(destParentTable);
     }
 
     void dropTable(String table) {

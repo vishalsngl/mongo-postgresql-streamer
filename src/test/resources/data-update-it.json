@@ -31,7 +31,8 @@
     "ratings": [
       {
         "rating": 3,
-        "type": "PUBLIC"
+        "type": "PUBLIC",
+        "tags": ["crazy", "wonder"]
       }
     ]
   },

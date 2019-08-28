@@ -6,7 +6,9 @@ import com.malt.mongopostgresqlstreamer.model.FlattenMongoDocument;
 import com.malt.mongopostgresqlstreamer.model.TableMapping;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.*;
@@ -17,9 +19,7 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 class PostgreSqlConnectorTest {
 
@@ -112,7 +112,7 @@ class PostgreSqlConnectorTest {
 
             ArgumentCaptor<List<FieldMapping>> argFieldMappings = ArgumentCaptor.forClass(List.class);
             ArgumentCaptor<List<Field>> argFields = ArgumentCaptor.forClass(List.class);
-            verify(sqlExecutor, times(2)).batchInsert(eq("team_members"), argFieldMappings.capture(), argFields.capture());
+            verify(sqlExecutor, times(2)).batchInsert(eq("teams"), eq("team_members"), argFieldMappings.capture(), argFields.capture());
 
             List<List<FieldMapping>> fieldMappings = argFieldMappings.getAllValues();
             List<List<Field>> fields = argFields.getAllValues();
@@ -149,7 +149,7 @@ class PostgreSqlConnectorTest {
         private void verifyBulkInsert() {
             ArgumentCaptor<List<FieldMapping>> argFieldMappings = ArgumentCaptor.forClass(List.class);
             ArgumentCaptor<List<Field>> argFields = ArgumentCaptor.forClass(List.class);
-            verify(sqlExecutor).batchInsert(eq("teams"), argFieldMappings.capture(), argFields.capture());
+            verify(sqlExecutor).batchInsert(eq("teams"), eq("teams"), argFieldMappings.capture(), argFields.capture());
 
             List<FieldMapping> fieldMappings = argFieldMappings.getValue();
             assertThat(fieldMappings).hasSize(4)
@@ -258,7 +258,7 @@ class PostgreSqlConnectorTest {
         private void verifyUserInsertion() {
             ArgumentCaptor<List<FieldMapping>> argFieldMappings = ArgumentCaptor.forClass(List.class);
             ArgumentCaptor<List<Field>> argFields = ArgumentCaptor.forClass(List.class);
-            verify(sqlExecutor).batchInsert(eq("users"), argFieldMappings.capture(), argFields.capture());
+            verify(sqlExecutor).batchInsert(eq("users"), eq("users"), argFieldMappings.capture(), argFields.capture());
 
             List<FieldMapping> fieldMappings = argFieldMappings.getValue();
             assertThat(fieldMappings).hasSize(4)
@@ -289,7 +289,7 @@ class PostgreSqlConnectorTest {
         private String verifyUserCommentsInsertion() {
             ArgumentCaptor<List<FieldMapping>> argFieldMappings = ArgumentCaptor.forClass(List.class);
             ArgumentCaptor<List<Field>> argFields = ArgumentCaptor.forClass(List.class);
-            verify(sqlExecutor).batchInsert(eq("users_comments"), argFieldMappings.capture(), argFields.capture());
+            verify(sqlExecutor).batchInsert(eq("users"), eq("users_comments"), argFieldMappings.capture(), argFields.capture());
 
             List<FieldMapping> fieldMappings = argFieldMappings.getValue();
             assertThat(fieldMappings).hasSize(5)
@@ -319,7 +319,7 @@ class PostgreSqlConnectorTest {
         private void verifyUserCommentsTagsInsertion(String id) {
             ArgumentCaptor<List<FieldMapping>> argFieldMappings = ArgumentCaptor.forClass(List.class);
             ArgumentCaptor<List<Field>> argFields = ArgumentCaptor.forClass(List.class);
-            verify(sqlExecutor).batchInsert(eq("users_comments_tags"), argFieldMappings.capture(), argFields.capture());
+            verify(sqlExecutor).batchInsert(eq("users"), eq("users_comments_tags"), argFieldMappings.capture(), argFields.capture());
 
             List<FieldMapping> fieldMappings = argFieldMappings.getValue();
             assertThat(fieldMappings).hasSize(4)

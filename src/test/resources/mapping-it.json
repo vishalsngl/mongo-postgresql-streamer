@@ -65,6 +65,22 @@
       },
       "type": {
         "type": "TEXT"
+      },
+      "tags": {
+        "type": "_ARRAY_OF_SCALARS",
+        "dest": "superhero_rating_tags",
+        "fk": "superhero_rating_id",
+        "valueField": "tag"
+      }
+    },
+    "superhero_rating_tags": {
+      "pk": "id",
+      "superhero_rating_id": {
+        "dest": "superhero_rating_id",
+        "type": "TEXT"
+      },
+      "tag": {
+        "type": "TEXT"
       }
     }
   }

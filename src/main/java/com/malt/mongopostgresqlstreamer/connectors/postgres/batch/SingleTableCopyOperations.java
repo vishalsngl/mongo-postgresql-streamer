@@ -53,10 +53,8 @@ class SingleTableCopyOperations {
             throw new InvalidTableFieldException(table, fieldNames, fields);
         }
 
-        this.copyString.append(serialize(fields.stream().sorted().map(Field::getValue).collect(toList())));
-        this.valueCounter.incrementAndGet();
-
-        if (valueCounter.get() >= CHUNK_SIZE) {
+        copyString.append(serialize(fields.stream().sorted().map(Field::getValue).collect(toList())));
+        if (valueCounter.incrementAndGet() >= CHUNK_SIZE) {
             releaseValues();
         }
     }

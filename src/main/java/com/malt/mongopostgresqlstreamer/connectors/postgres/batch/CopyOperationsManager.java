@@ -7,37 +7,31 @@ import org.postgresql.copy.CopyManager;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
 public class CopyOperationsManager {
     private final CopyManager copyManager;
-    private final Map<String, SingleTableCopyOperations> copyOperationsPerTable = new HashMap<>();
+    private final Map<String, TableAndRelativesCopyOperations> copyOperationsPerTable = new ConcurrentHashMap<>(1);
 
     @Inject
     public CopyOperationsManager(CopyManager copyManager) {
         this.copyManager = copyManager;
     }
 
-    public void addInsertOperation(String table, List<FieldMapping> fieldMappings, List<Field> fields) {
-        if (!copyOperationsPerTable.containsKey(table)) {
-            copyOperationsPerTable.put(
-                    table,
-                    new SingleTableCopyOperations(
-                            table, fieldMappings,
-                            copyManager
-                    )
-            );
-        }
-
-        copyOperationsPerTable.get(table).addOperation(fields);
+    public void addInsertOperation(String parentTable, String table, List<FieldMapping> fieldMappings, List<Field> fields) {
+        TableAndRelativesCopyOperations operations = copyOperationsPerTable.computeIfAbsent(
+                parentTable,
+                notFound -> new TableAndRelativesCopyOperations(copyManager)
+        );
+        operations.addOperation(table, fieldMappings, fields);
     }
 
-    public void finalizeCopyOperations(String destTable) {
-        SingleTableCopyOperations operations = copyOperationsPerTable.get(destTable);
+    public void finalizeCopyOperations(String destParentTable) {
+        TableAndRelativesCopyOperations operations = copyOperationsPerTable.get(destParentTable);
         if (operations != null) {
             operations.finalizeOperations();
         }
