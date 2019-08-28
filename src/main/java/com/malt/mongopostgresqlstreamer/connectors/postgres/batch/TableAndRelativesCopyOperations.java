@@ -10,6 +10,8 @@ import java.util.Map;
 
 class TableAndRelativesCopyOperations {
 
+    private static final int CHUNK_SIZE = 500;
+
     private final CopyManager copyManager;
     private final Map<String, SingleTableCopyOperations> operationsForMainTableAndRelativesIncreasingDepthOfRelation = new LinkedHashMap<>();
 
@@ -22,7 +24,18 @@ class TableAndRelativesCopyOperations {
                 tableName,
                 tn -> new SingleTableCopyOperations(tn, fieldMappings, copyManager)
         );
+
         tableOperations.addOperation(fields);
+
+        if (countPendingValues() >= CHUNK_SIZE) {
+            finalizeOperations();
+        }
+    }
+
+    private int countPendingValues() {
+        return operationsForMainTableAndRelativesIncreasingDepthOfRelation.values().stream()
+                .mapToInt(SingleTableCopyOperations::countPendingValues)
+                .sum();
     }
 
     void finalizeOperations() {

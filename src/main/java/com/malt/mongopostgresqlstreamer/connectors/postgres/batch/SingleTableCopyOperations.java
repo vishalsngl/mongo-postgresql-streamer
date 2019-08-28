@@ -17,7 +17,6 @@ import static java.util.stream.Collectors.toList;
 
 @Slf4j
 class SingleTableCopyOperations {
-    public static final int CHUNK_SIZE = 500;
 
     private final AtomicInteger valueCounter = new AtomicInteger();
 
@@ -54,9 +53,8 @@ class SingleTableCopyOperations {
         }
 
         copyString.append(serialize(fields.stream().sorted().map(Field::getValue).collect(toList())));
-        if (valueCounter.incrementAndGet() >= CHUNK_SIZE) {
-            releaseValues();
-        }
+
+        valueCounter.incrementAndGet();
     }
 
     private List<String> getMissingFields(List<Field> fields) {
@@ -141,7 +139,11 @@ class SingleTableCopyOperations {
         }
     }
 
-    public void finalizeOperations() {
+    void finalizeOperations() {
         releaseValues();
+    }
+
+    int countPendingValues() {
+        return valueCounter.get();
     }
 }
