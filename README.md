@@ -119,6 +119,8 @@ Please notice the following :
 - If the original document in mongodb has a embedded document, everything is flattened to be inserted in PostgreSQL
 - One can define indices in two different ways : Using the array ``indices`` and a SQL definition or autogenerate index
  by setting the ``index`` field to true
+- By default, the created table will be named as the source MongoDB collection. You can specify another name using the
+`_destination` property.
 
 The connector also supports arrays of documents. Let say your Mongo database stores the following documents :
 
