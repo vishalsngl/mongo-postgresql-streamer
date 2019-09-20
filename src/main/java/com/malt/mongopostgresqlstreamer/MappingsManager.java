@@ -10,7 +10,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import java.io.*;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -101,7 +102,7 @@ public class MappingsManager {
                     !fieldName.equals("_source") &&
                     !fieldName.equals("_destination") &&
                     !fieldName.equals("_filters")) {
-                FieldMapping fieldMapping = readFieldMapping(mappingName, indices, collection, fieldName);
+                FieldMapping fieldMapping = readFieldMapping(tableMapping.getDestinationName(), indices, collection, fieldName);
                 fieldMappings.add(fieldMapping);
             }
         }
@@ -115,7 +116,7 @@ public class MappingsManager {
 
         JsonArray filtersMapping = collection.getAsJsonArray("_filters");
         Optional.ofNullable(filtersMapping).ifPresent(f -> {
-            for (JsonElement element: filtersMapping) {
+            for (JsonElement element : filtersMapping) {
                 JsonObject filter = element.getAsJsonObject();
                 filters.add(new FilterMapping(filter.get("field").getAsString(), filter.get("value").getAsString()));
             }
@@ -132,7 +133,7 @@ public class MappingsManager {
         }
     }
 
-    private FieldMapping readFieldMapping(String collectionName, List<String> indices, JsonObject collection, String fieldName) {
+    private FieldMapping readFieldMapping(String tableName, List<String> indices, JsonObject collection, String fieldName) {
         JsonObject fieldObject = collection.getAsJsonObject(fieldName);
         FieldMapping fieldMapping = new FieldMapping();
         fieldMapping.setSourceName(fieldName);
@@ -148,7 +149,7 @@ public class MappingsManager {
 
         if (fieldObject.has("index")) {
             fieldMapping.setIndexed(fieldObject.get("index").getAsBoolean());
-            addToIndices(collectionName, indices, fieldMapping);
+            addToIndices(tableName, indices, fieldMapping);
         }
 
         if (fieldObject.has("fk")) {
@@ -182,20 +183,20 @@ public class MappingsManager {
 
     }
 
-    private void addToIndices(String collectionName, List<String> indices, FieldMapping fieldMapping) {
+    private void addToIndices(String tableName, List<String> indices, FieldMapping fieldMapping) {
         indices.add(String.format("INDEX idx_%s_%s ON %s (%s)",
-                collectionName.replace(".", "_"),
-                fieldMapping.getDestinationName(), collectionName, fieldMapping.getDestinationName()));
+                tableName.replace(".", "_"),
+                fieldMapping.getDestinationName(), tableName, fieldMapping.getDestinationName()));
     }
 
-    private void addCreationDateGeneratedFieldDefinition(String collectionName, List<FieldMapping> fieldMappings, List<String> indices) {
+    private void addCreationDateGeneratedFieldDefinition(String tableName, List<FieldMapping> fieldMappings, List<String> indices) {
         FieldMapping creationDateDefinition = new FieldMapping();
         creationDateDefinition.setType("TIMESTAMP");
         creationDateDefinition.setDestinationName("_creationdate");
         creationDateDefinition.setIndexed(true);
         creationDateDefinition.setSourceName("_creationdate");
         fieldMappings.add(creationDateDefinition);
-        addToIndices(collectionName, indices,  creationDateDefinition);
+        addToIndices(tableName, indices, creationDateDefinition);
     }
 
     public List<String> mappedNamespaces() {
