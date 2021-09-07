@@ -21,6 +21,6 @@ class Lag {
     Lag(BsonTimestamp checkpoint) {
         lastCheckpoint = new Date(((long)checkpoint.getTime())*1000);
         now = new Date();
-        lagLength = now.getTime() - checkpoint.getTime();
+        lagLength = now.getTime() - lastCheckpoint.getTime();
     }
 }
