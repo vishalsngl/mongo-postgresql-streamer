@@ -94,7 +94,6 @@ public class MappingsManager {
         tableMapping.setPrimaryKey(collection.get("pk").getAsString());
 
         addIndices(indices, collection);
-        addCreationDateGeneratedFieldDefinition(tableMapping.getDestinationName(), fieldMappings, indices);
 
         for (String fieldName : collection.keySet()) {
             if (!fieldName.equals("pk") &&
@@ -187,16 +186,6 @@ public class MappingsManager {
         indices.add(String.format("INDEX idx_%s_%s ON %s (%s)",
                 tableName.replace(".", "_"),
                 fieldMapping.getDestinationName(), tableName, fieldMapping.getDestinationName()));
-    }
-
-    private void addCreationDateGeneratedFieldDefinition(String tableName, List<FieldMapping> fieldMappings, List<String> indices) {
-        FieldMapping creationDateDefinition = new FieldMapping();
-        creationDateDefinition.setType("TIMESTAMP");
-        creationDateDefinition.setDestinationName("_creationdate");
-        creationDateDefinition.setIndexed(true);
-        creationDateDefinition.setSourceName("_creationdate");
-        fieldMappings.add(creationDateDefinition);
-        addToIndices(tableName, indices, creationDateDefinition);
     }
 
     public List<String> mappedNamespaces() {

@@ -20,7 +20,6 @@ public class FlattenMongoDocument {
         map = filters(map);
         FlattenMongoDocument flattenMongoDocument = new FlattenMongoDocument();
         flattenMongoDocument.setValues(map);
-        addCreationDateIfPossible(flattenMongoDocument);
         fixDateOutOfRange(flattenMongoDocument);
 
         return flattenMongoDocument;
@@ -36,7 +35,6 @@ public class FlattenMongoDocument {
                                 .flattenAsMap()
                 )
         );
-        addCreationDateIfPossible(flattenMongoDocument);
         fixDateOutOfRange(flattenMongoDocument);
 
         return flattenMongoDocument;
@@ -61,18 +59,6 @@ public class FlattenMongoDocument {
         });
 
         return filteredMap;
-    }
-
-    private static void addCreationDateIfPossible(FlattenMongoDocument flattenMongoDocument) {
-        flattenMongoDocument.get("_id").ifPresent( id -> {
-            if (id instanceof ObjectId) {
-                Date creationDate = ((ObjectId) id).getDate();
-                flattenMongoDocument.getValues().put("_creationdate", creationDate);
-            } else if (id instanceof String && ObjectId.isValid((String) id)) {
-                Date creationDate = ((new ObjectId((String) id))).getDate();
-                flattenMongoDocument.getValues().put("_creationdate", creationDate);
-            }
-        });
     }
 
     public Optional<Object> get(String key) {
